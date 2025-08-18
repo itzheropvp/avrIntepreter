@@ -21,11 +21,9 @@ private:
 
     static Value parseValue(const std::string& token);
     static std::string valueToString(const Value& v);
-    std::vector<std::string> tokenize(const std::string& line, char delimiter = ' ');
 
-    void cmdPrint(const std::vector<std::string>& args);
-    void cmdWait(const std::vector<std::string>& args);
-    void cmdLocal(const std::vector<std::string>& args);
+    double toNumber(const std::string& token);
+    double evalExpression(const std::string& expr);
 
 public:
     Eval() = default;

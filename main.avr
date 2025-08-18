@@ -1,7 +1,6 @@
--- Questo è un commento
+local a = "5"
+local b = 5
 
-local text 1045
+local x = a + b
 
-wait 5.5
-
-print "Questo è una stringa concatenanta con un un numero --> " text
+print x

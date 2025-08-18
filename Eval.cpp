@@ -4,6 +4,8 @@
 #include <cctype>
 #include <thread>
 #include <chrono>
+#include <stack>
+#include <functional>
 
 AVRError::AVRError(const std::string& msg) : std::runtime_error(msg) {}
 
@@ -33,9 +35,7 @@ std::vector<std::string> Eval::splitTokens(const std::string& line) {
         }
     }
 
-    if (!token.empty())
-        tokens.push_back(token);
-
+    if (!token.empty()) tokens.push_back(token);
     return tokens;
 }
 
@@ -53,7 +53,6 @@ void Eval::waitFunction(const Value& v) {
 Value Eval::parseValue(const std::string &token) {
     if (token == "true") return Value(true);
     if (token == "false") return Value(false);
-    if (token == "null") return Value(nullptr);
 
     // string
     if (token.size() >= 2 && token.front() == '"' && token.back() == '"') {
@@ -62,9 +61,7 @@ Value Eval::parseValue(const std::string &token) {
 
     // Number (double or int)
     try {
-        if (token.find('.') != std::string::npos) {
-            return Value(std::stod(token));
-        }
+        if (token.find('.') != std::string::npos) return Value(std::stod(token));
         return std::stoi(token);
     }
     catch (...) {
@@ -77,6 +74,81 @@ std::string Eval::valueToString(const Value& v) {
     if (std::holds_alternative<double>(v)) return std::to_string(std::get<double>(v));
     if (std::holds_alternative<std::string>(v)) return std::get<std::string>(v);
     return std::get<std::string>(v);
+}
+
+double Eval::toNumber(const std::string& token) {
+    if (locals.find(token) != locals.end()) {
+        const Value& v = locals[token];
+        if (std::holds_alternative<int>(v)) return std::get<int>(v);
+        if (std::holds_alternative<double>(v)) return std::get<double>(v);
+
+        std::string s = std::get<std::string>(v);
+        try { return std::stod(s); }
+        catch (...) { throw AVRError("Cannot convert '" + s + "' to number"); }
+    }
+
+    try {
+        if (token.front() == '"' && token.back() == '"')
+            return std::stod(token.substr(1, token.size() - 2));
+        if (token.find('.') != std::string::npos) return std::stod(token);
+        return std::stoi(token);
+    }
+    catch (...) { throw AVRError("Invalid number: " + token); }
+}
+
+double Eval::evalExpression(const std::string& expr) {
+    std::istringstream ss(expr);
+    std::string t;
+    std::vector<std::string> outputQueue;
+    std::stack<std::string> ops;
+
+    auto prec = [](const std::string& o) {
+        if (o == "+" || o == "-") return 1;
+        if (o == "*" || o == "/") return 2;
+        return 0;
+    };
+
+    while (ss >> t) {
+        if (t == "(") ops.push(t);
+        else if (t == ")") {
+            while (!ops.empty() && ops.top() != "(") {
+                outputQueue.push_back(ops.top());
+                ops.pop();
+            }
+            if (!ops.empty()) ops.pop();
+        }
+        else if (t == "+" || t == "-" || t == "*" || t == "/") {
+            while (!ops.empty() && prec(ops.top()) >= prec(t)) {
+                outputQueue.push_back(ops.top());
+                ops.pop();
+            }
+            ops.push(t);
+        } else {
+            outputQueue.push_back(t);
+        }
+    }
+
+    while (!ops.empty()) {
+        outputQueue.push_back(ops.top());
+        ops.pop();
+    }
+
+    std::stack<double> st;
+    for (auto &tk : outputQueue) {
+        if (tk == "+" || tk == "-" || tk == "*" || tk == "/") {
+            double b = st.top(); st.pop();
+            double a = st.top(); st.pop();
+
+            if (tk == "+") st.push(a + b);
+            if (tk == "-") st.push(a - b);
+            if (tk == "*") st.push(a * b);
+            if (tk == "/") st.push(a / b);
+        } else {
+            st.push(toNumber(tk));
+        }
+    }
+
+    return st.top();
 }
 
 void Eval::evaluate(const std::string& code) {
@@ -95,12 +167,19 @@ void Eval::evaluate(const std::string& code) {
         if (tokens.empty()) continue;
 
         if (tokens[0] == "local") {
-            if (tokens.size() < 2)
+            if (tokens.size() < 4 || tokens[2] != "=")
                 throw AVRError("Invalid local declaration at line " + std::to_string(line_number));
 
             const std::string& name = tokens[1];
-            Value val = parseValue(tokens[2]);
-            locals[name] = val;
+
+            if (trimmed.find_first_of("+-*/") != std::string::npos) {
+                std::string expr = trimmed.substr(trimmed.find("=") + 1);
+                double res = evalExpression(expr);
+                locals[name] = Value(res);
+            } else {
+                locals[name] = parseValue(tokens[3]);
+            }
+
         } else if (tokens[0] == "print") {
             std::string out;
             for (size_t i = 1; i < tokens.size(); ++i) {
