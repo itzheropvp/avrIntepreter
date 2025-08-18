@@ -1,0 +1,32 @@
+{
+  "name": "avr",
+  "displayName": "AVR Language",
+  "description": "Custom AVR scripting language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "avr",
+      "aliases": ["AVR Script", "avr"],
+      "extensions": [".avr"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "avr",
+      "scopeName": "source.avr",
+      "path": "./syntaxes/avr.tmLanguage.json"
+    }],
+    "themes": [
+      {
+        "label": "AVR Theme",
+        "uiTheme": "vs-dark",
+        "path": "./themes/avr-color-theme.json"
+      }
+    ]
+  }
+}

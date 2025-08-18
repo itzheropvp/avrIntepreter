@@ -1,0 +1,53 @@
+{
+    "name": "AVR Theme",
+    "type": "dark",
+    "colors": {
+      "editor.background": "#1e1e1e",
+      "editor.foreground": "#d4d4d4",
+      "editorCursor.foreground": "#ffffff",
+      "editor.lineHighlightBackground": "#2a2a2a",
+      "editor.selectionBackground": "#264f78"
+    },
+    "tokenColors": [
+      {
+        "scope": "keyword.control.avr",
+        "settings": {
+          "foreground": "#569CD6",
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": "variable.other.local.avr",
+        "settings": {
+          "foreground": "#9CDCFE"
+        }
+      },
+      {
+        "scope": "string.quoted.double.avr",
+        "settings": {
+          "foreground": "#CE9178"
+        }
+      },
+      {
+        "scope": "constant.numeric.avr",
+        "settings": {
+          "foreground": "#B5CEA8"
+        }
+      },
+      {
+        "scope": "comment.line.double-dash.avr",
+        "settings": {
+          "foreground": "#6A9955",
+          "fontStyle": "italic"
+        }
+      },
+      {
+        "scope": "invalid.illegal.avr",
+        "settings": {
+          "foreground": "#F44747",
+          "fontStyle": "underline"
+        }
+      }
+    ]
+  }
+  

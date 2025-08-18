@@ -1,0 +1,7 @@
+-- Questo è un commento
+
+local text 1045
+
+wait 5.5
+
+print "Questo è una stringa concatenanta con un un numero --> " text

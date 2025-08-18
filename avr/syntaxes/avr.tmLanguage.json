@@ -1,0 +1,67 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "avr",
+	"scopeName": "source.avr",
+	"patterns": [
+	  { "include": "#comments" },
+	  { "include": "#keywords" },
+	  { "include": "#variables" },
+	  { "include": "#numbers" },
+	  { "include": "#strings" },
+	  { "include": "#errors" }
+	],
+	"repository": {
+	  "comments": {
+		"patterns": [
+		  {
+			"name": "comment.line.double-dash.avr",
+			"match": "--.*$"
+		  }
+		]
+	  },
+	  "keywords": {
+		"patterns": [
+		  {
+			"name": "keyword.control.avr",
+			"match": "\\b(print|wait)\\b"
+		  }
+		]
+	  },
+	  "variables": {
+		"patterns": [
+		  {
+			"name": "variable.other.local.avr",
+			"match": "\\blocal\\b"
+		  }
+		]
+	  },
+	  "numbers": {
+		"patterns": [
+		  {
+			"name": "constant.numeric.avr",
+			"match": "\\b\\d+(\\.\\d+)?\\b"
+		  }
+		]
+	  },
+	  "strings": {
+		"name": "string.quoted.double.avr",
+		"begin": "\"",
+		"end": "\"",
+		"patterns": [
+		  {
+			"name": "constant.character.escape.avr",
+			"match": "\\\\."
+		  }
+		]
+	  },
+	  "errors": {
+		"patterns": [
+		  {
+			"name": "invalid.illegal.avr",
+			"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=\\s*\\bprint|wait\\b)|(?<=local\\s+)\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+		  }
+		]
+	  }
+	}
+  }
+  
