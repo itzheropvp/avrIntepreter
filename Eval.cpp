@@ -7,8 +7,6 @@
 #include <stack>
 #include <functional>
 
-AVRError::AVRError(const std::string& msg) : std::runtime_error(msg) {}
-
 std::vector<std::string> Eval::splitTokens(const std::string& line) {
     std::vector<std::string> tokens;
     std::string token;
@@ -97,48 +95,60 @@ double Eval::toNumber(const std::string& token) {
 }
 
 double Eval::evalExpression(const std::string& expr) {
-    std::istringstream ss(expr);
-    std::string t;
-    std::vector<std::string> outputQueue;
-    std::stack<std::string> ops;
+    std::vector<std::string> tokens;
+    std::string current;
+    for (char c : expr) {
+        if (std::isspace(c)) continue;
+        if (std::isdigit(c) || c == '.' || std::isalpha(c)) {
+            current += c;
+        } else {
+            if (!current.empty()) {
+                tokens.push_back(current);
+                current.clear();
+            }
+            std::string op(1, c);
+            tokens.push_back(op);
+        }
+    }
+    if (!current.empty()) tokens.push_back(current);
 
+    std::vector<std::string> output;
+    std::stack<std::string> ops;
     auto prec = [](const std::string& o) {
         if (o == "+" || o == "-") return 1;
         if (o == "*" || o == "/") return 2;
         return 0;
     };
 
-    while (ss >> t) {
-        if (t == "(") ops.push(t);
-        else if (t == ")") {
+    for (auto &t : tokens) {
+        if (t == "(") {
+            ops.push(t);
+        } else if (t == ")") {
             while (!ops.empty() && ops.top() != "(") {
-                outputQueue.push_back(ops.top());
+                output.push_back(ops.top());
                 ops.pop();
             }
-            if (!ops.empty()) ops.pop();
-        }
-        else if (t == "+" || t == "-" || t == "*" || t == "/") {
+            ops.pop();
+        } else if (t == "+" || t == "-" || t == "*" || t == "/") {
             while (!ops.empty() && prec(ops.top()) >= prec(t)) {
-                outputQueue.push_back(ops.top());
+                output.push_back(ops.top());
                 ops.pop();
             }
             ops.push(t);
         } else {
-            outputQueue.push_back(t);
+            output.push_back(t);
         }
     }
-
     while (!ops.empty()) {
-        outputQueue.push_back(ops.top());
+        output.push_back(ops.top());
         ops.pop();
     }
 
     std::stack<double> st;
-    for (auto &tk : outputQueue) {
+    for (auto &tk : output) {
         if (tk == "+" || tk == "-" || tk == "*" || tk == "/") {
-            double b = st.top(); st.pop();
-            double a = st.top(); st.pop();
-
+            auto b = st.top(); st.pop();
+            auto a = st.top(); st.pop();
             if (tk == "+") st.push(a + b);
             if (tk == "-") st.push(a - b);
             if (tk == "*") st.push(a * b);
@@ -147,7 +157,6 @@ double Eval::evalExpression(const std::string& expr) {
             st.push(toNumber(tk));
         }
     }
-
     return st.top();
 }
 
@@ -168,16 +177,20 @@ void Eval::evaluate(const std::string& code) {
 
         if (tokens[0] == "local") {
             if (tokens.size() < 4 || tokens[2] != "=")
-                throw AVRError("Invalid local declaration at line " + std::to_string(line_number));
+                throw AVRError("Invalid local declaration", line_number);
 
             const std::string& name = tokens[1];
 
-            if (trimmed.find_first_of("+-*/") != std::string::npos) {
-                std::string expr = trimmed.substr(trimmed.find("=") + 1);
-                double res = evalExpression(expr);
-                locals[name] = Value(res);
-            } else {
-                locals[name] = parseValue(tokens[3]);
+            try {
+                if (trimmed.find_first_of("+-*/") != std::string::npos) {
+                    std::string expr = trimmed.substr(trimmed.find("=") + 1);
+                    double res = evalExpression(expr);
+                    locals[name] = Value(res);
+                } else {
+                    locals[name] = parseValue(tokens[3]);
+                }
+            } catch (const std::exception& e) {
+                throw AVRError(std::string("Error evaluating local '") + name + "': " + e.what(), line_number);
             }
 
         } else if (tokens[0] == "print") {
@@ -189,23 +202,27 @@ void Eval::evaluate(const std::string& code) {
                 }
                 else {
                     if (locals.find(part) == locals.end())
-                        throw AVRError("Variable '" + part + "' not defined at line " + std::to_string(line_number));
+                        throw AVRError("Variable '" + part + "' not defined", line_number);
                     out += valueToString(locals[part]);
                 }
             }
             std::cout << out << std::endl;
         } else if (tokens[0] == "wait") {
             if (tokens.size() != 2)
-                throw AVRError("Invalid wait syntax at line " + std::to_string(line_number));
+                throw AVRError("Invalid wait syntax", line_number);
 
             std::string arg = tokens[1];
             Value v;
             if (locals.find(arg) != locals.end()) v = locals[arg];
             else v = parseValue(arg);
 
-            waitFunction(v);
+            try {
+                waitFunction(v);
+            } catch (const std::exception& e) {
+                throw AVRError(std::string("Error in wait: ") + e.what(), line_number);
+            }
         } else {
-            throw AVRError("Unknown command \"" + tokens[0] + "\" at line " + std::to_string(line_number));
+            throw AVRError("Unknown command '" + tokens[0] + "'", line_number);
         }
     }
 }
