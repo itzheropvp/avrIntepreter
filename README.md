@@ -31,7 +31,7 @@
 1. Clona il repository:
 
 ```bash
-git clone https://github.com/tuo-username/avrInterpreter.git
+git clone https://github.com/itzheropvp/avrInterpreter.git
 cd avrInterpreter
 ```
 
