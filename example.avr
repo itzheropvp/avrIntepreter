@@ -1,0 +1,19 @@
+-- EXAMPLE.AVR
+
+-- Variable | local <variable_name> = <value>
+local hello = "Hello"
+
+-- Print function | print <variable|text>
+print hello
+print "Hello, World"
+print "10" hello
+
+-- Wait function | wait <number|float>
+wait 2
+
+-- Variable | local <variable_name> = <value> <*|-|+|/> <value2> ...
+local bmath = 10 * 5
+-- Variable 3 | local <variable_name> = (<variable> <...> <value>) <...> <value>
+local math = ( bmath * 5 ) / 2
+
+print math
