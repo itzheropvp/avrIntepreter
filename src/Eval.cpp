@@ -1,4 +1,4 @@
-#include "Eval.h"
+#include "../include/avrInterpreter/Eval.h"
 #include <iostream>
 #include <sstream>
 #include <cctype>
@@ -220,6 +220,163 @@ void Eval::evaluate(const std::string& code) {
                 waitFunction(v);
             } catch (const std::exception& e) {
                 throw AVRError(std::string("Error in wait: ") + e.what(), line_number);
+            }
+        } else if (tokens[0] == "if") {
+            const std::string& ifLine = trimmed;
+
+            std::string wholeBlock;
+            int nested = 0;
+            while (std::getline(stream, line)) {
+                ++line_number;
+                std::string t = line;
+                t.erase(0, t.find_first_not_of(" \t"));
+                if (t.rfind("if",0)==0) nested++;
+                if (t == "end") {
+                    if(nested == 0) break;
+                    nested--;
+                }
+                wholeBlock += line + "\n";
+            }
+
+            struct Part {
+                std::string type; // "if", "elseif", "else"
+                std::string cond;
+                std::string code;
+            };
+
+            std::vector<Part> parts;
+            std::istringstream bl( ifLine + "\n" + wholeBlock );
+            std::string ln;
+            Part current;
+            bool first = true;
+            while(std::getline(bl, ln)) {
+                std::string t = ln;
+                t.erase(0, t.find_first_not_of(" \t"));
+
+                if( (t.rfind("if",0)==0 && first) || t.rfind("elseif",0)==0 || t=="else" ) {
+                    if(!first) parts.push_back(current);
+                    current = Part();
+                    current.code.clear();
+                    first = false;
+
+                    if(t.rfind("if",0)==0) { current.type="if"; current.cond = t.substr(2); }
+                    if(t.rfind("elseif",0)==0){ current.type="elseif"; current.cond = t.substr(6);}
+                    if(t=="else"){ current.type="else"; }
+
+                    auto posThen = current.cond.find("then");
+                    if(posThen!=std::string::npos) current.cond = current.cond.substr(0,posThen);
+
+                    current.cond.erase(0,current.cond.find_first_not_of(" \t"));
+                    current.cond.erase(current.cond.find_last_not_of(" \t")+1);
+                }
+                else if(t!="end"){
+                    current.code += ln + "\n";
+                }
+            }
+            parts.push_back(current);
+
+            auto evalCond = [&](const std::string &c)->bool{
+                std::string ops[] = {">=", "<=", "==", "!=", ">", "<"};
+                for (auto &op: ops) {
+                    auto pos = c.find(op);
+                    if(pos!=std::string::npos){
+                        std::string left=c.substr(0,pos);
+                        std::string right=c.substr(pos+op.size());
+                        left.erase(0,left.find_first_not_of(" \t"));
+                        left.erase(left.find_last_not_of(" \t")+1);
+                        right.erase(0,right.find_first_not_of(" \t"));
+                        right.erase(right.find_last_not_of(" \t")+1);
+                        double a = evalExpression(left);
+                        double b = evalExpression(right);
+                        if(op==">") return a>b;
+                        if(op=="<") return a<b;
+                        if(op==">=") return a>=b;
+                        if(op=="<=") return a<=b;
+                        if(op=="==") return a==b;
+                        if(op=="!=") return a!=b;
+                    }
+                }
+                throw AVRError("Invalid condition '" + c + "'", line_number);
+            };
+
+            bool executed = false;
+            for(auto &p: parts){
+                if(p.type=="else"){
+                    if(!executed){
+                        Eval inner;
+                        inner.locals = this->locals;
+                        inner.evaluate(p.code);
+                        this->locals = inner.locals;
+                        executed = true;
+                    }
+                }
+                else{
+                    bool res = evalCond(p.cond);
+                    if(res && !executed){
+                        Eval inner;
+                        inner.locals = this->locals;
+                        inner.evaluate(p.code);
+                        this->locals = inner.locals;
+                        executed = true;
+                    }
+                }
+            }
+        } else if (tokens[0] == "while") {
+            std::string condline = trimmed.substr(5);
+            auto posDo = condline.find("do");
+            if (posDo == std::string::npos)
+                throw AVRError("Missing 'do' in while", line_number);
+
+            std::string condition = condline.substr(0, posDo);
+            // trim
+            condition.erase(0, condition.find_first_not_of(" \t"));
+            condition.erase(condition.find_last_not_of(" \t") + 1);
+
+            // Prendiamo il blocco interno al while (fino a "end")
+            std::string block;
+            int nested = 0;
+            while (std::getline(stream, line)) {
+                ++line_number;
+                std::string t = line;
+                t.erase(0, t.find_first_not_of(" \t"));
+                if (t.rfind("while", 0) == 0) nested++;
+                if (t == "end") {
+                    if (nested == 0) break;
+                    nested--;
+                }
+                block += line + "\n";
+            }
+
+            // Funzione per valutare la condizione (ricicliamo comparatori logici)
+            auto evalCond = [&](const std::string& c)->bool {
+                std::string ops[] = { ">=", "<=", "==", "!=", ">", "<" };
+                for (auto &op : ops) {
+                    auto p = c.find(op);
+                    if (p != std::string::npos) {
+                        std::string left = c.substr(0, p);
+                        std::string right = c.substr(p + op.size());
+                        left.erase(0, left.find_first_not_of(" \t"));
+                        left.erase(left.find_last_not_of(" \t") + 1);
+                        right.erase(0, right.find_first_not_of(" \t"));
+                        right.erase(right.find_last_not_of(" \t") + 1);
+                        double a = evalExpression(left);
+                        double b = evalExpression(right);
+                        if (op == ">") return a > b;
+                        if (op == "<") return a < b;
+                        if (op == ">=") return a >= b;
+                        if (op == "<=") return a <= b;
+                        if (op == "==") return a == b;
+                        if (op == "!=") return a != b;
+                    }
+                }
+                throw AVRError("Invalid condition '" + c + "'", line_number);
+            };
+
+            while (evalCond(condition)) {
+                Eval inner;
+                inner.locals = this->locals;
+                inner.evaluate(block);
+                this->locals = inner.locals;
             }
         } else {
             throw AVRError("Unknown command '" + tokens[0] + "'", line_number);

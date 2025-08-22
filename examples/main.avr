@@ -1,0 +1,18 @@
+-- main.avr
+print "Hello, World!"
+
+local a = 20
+local b = 10
+
+if b > a then
+    print b " è maggiore di " a
+else
+    print b " è minore di " a
+end
+
+local i = 0
+
+while i < 10 do
+    local i = i + 1
+    print i
+ende
