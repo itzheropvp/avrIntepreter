@@ -1,5 +1,8 @@
+// custom engines
 #include "avrInterpreter/Interpreter.h"
-#include "avrInterpreter/Eval.h"  // internal engine
+#include "avrInterpreter/Eval.h"
+
+// c++ engines!
 #include <fstream>
 #include <sstream>
 
@@ -14,7 +17,8 @@ namespace avr {
     Interpreter::Interpreter() : p(std::make_unique<Impl>()) {}
     Interpreter::~Interpreter() = default;
 
-    bool Interpreter::run(const std::string& code) {
+    // added const bcs fking linter give random ahh warning
+    bool Interpreter::run(const std::string& code) const {
         try {
             p->eval.evaluate(code);
             return true;
@@ -24,7 +28,8 @@ namespace avr {
         }
     }
 
-    bool Interpreter::runFile(const std::string& filename) {
+    // honestly same shit here.. and idk how many times i need to add a const
+    bool Interpreter::runFile(const std::string& filename) const {
         std::ifstream file(filename);
         if (!file.is_open()) {
             p->lastError = "Could not open file: " + filename;

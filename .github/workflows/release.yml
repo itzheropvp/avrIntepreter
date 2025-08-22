@@ -1,0 +1,70 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v1.14
+        with:
+          cmake-version: "3.25.0"
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp build/Release/avrInterpreter_cli.exe dist/
+            7z a avrInterpreter-${{ github.ref_name }}-windows.zip ./dist/*
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            cp build/avrInterpreter_cli dist/
+            tar -czf avrInterpreter-${{ github.ref_name }}-macos.tar.gz -C dist .
+          else
+            cp build/avrInterpreter_cli dist/
+            tar -czf avrInterpreter-${{ github.ref_name }}-linux.tar.gz -C dist .
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: avrInterpreter-${{ matrix.os }}
+          path: |
+            *.zip
+            *.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "avrInterpreter ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/**/*

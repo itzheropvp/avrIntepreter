@@ -10,10 +10,10 @@ namespace avr {
         ~Interpreter();
 
         // Run code from a string
-        bool run(const std::string& code);
+        [[nodiscard]] bool run(const std::string& code) const;
 
         // Run code from a file
-        bool runFile(const std::string& filename);
+        [[nodiscard]] bool runFile(const std::string& filename) const;
 
         // had to add [[nodiscard]] cuz compiler bothers AAAAIOJAIOJIGOJASIOG
         [[nodiscard]] std::string getLastError() const;

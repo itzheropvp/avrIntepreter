@@ -13,8 +13,7 @@ std::vector<std::string> Eval::splitTokens(const std::string& line) {
     bool in_quotes = false;
 
     for (size_t i = 0; i < line.size(); ++i) {
-        char c = line[i];
-        if (c == '"') {
+        if (const char c = line[i]; c == '"') {
             token += c;
             if (in_quotes) {
                 tokens.push_back(token);
@@ -41,7 +40,7 @@ void Eval::waitFunction(const Value& v) {
     int seconds = 0;
     if (std::holds_alternative<int>(v)) seconds = std::get<int>(v);
     else if (std::holds_alternative<double>(v)) seconds = static_cast<int>(std::get<double>(v));
-    else throw AVRError("Invalid wait argument type");
+    else throw InterpError("Invalid wait argument type");
     std::this_thread::sleep_for(std::chrono::seconds(seconds));
 }
 
@@ -63,7 +62,7 @@ Value Eval::parseValue(const std::string &token) {
         return std::stoi(token);
     }
     catch (...) {
-        throw AVRError("Invalid value '" + token + "'");
+        throw InterpError("Invalid value '" + token + "'");
     }
 }
 
@@ -82,7 +81,7 @@ double Eval::toNumber(const std::string& token) {
 
         std::string s = std::get<std::string>(v);
         try { return std::stod(s); }
-        catch (...) { throw AVRError("Cannot convert '" + s + "' to number"); }
+        catch (...) { throw InterpError("Cannot convert '" + s + "' to number"); }
     }
 
     try {
@@ -91,7 +90,7 @@ double Eval::toNumber(const std::string& token) {
         if (token.find('.') != std::string::npos) return std::stod(token);
         return std::stoi(token);
     }
-    catch (...) { throw AVRError("Invalid number: " + token); }
+    catch (...) { throw InterpError("Invalid number: " + token); }
 }
 
 double Eval::evalExpression(const std::string& expr) {
@@ -177,20 +176,20 @@ void Eval::evaluate(const std::string& code) {
 
         if (tokens[0] == "local") {
             if (tokens.size() < 4 || tokens[2] != "=")
-                throw AVRError("Invalid local declaration", line_number);
+                throw InterpError("Invalid local declaration", line_number);
 
             const std::string& name = tokens[1];
 
             try {
                 if (trimmed.find_first_of("+-*/") != std::string::npos) {
-                    std::string expr = trimmed.substr(trimmed.find("=") + 1);
+                    std::string expr = trimmed.substr(trimmed.find('=') + 1);
                     double res = evalExpression(expr);
                     locals[name] = Value(res);
                 } else {
                     locals[name] = parseValue(tokens[3]);
                 }
             } catch (const std::exception& e) {
-                throw AVRError(std::string("Error evaluating local '") + name + "': " + e.what(), line_number);
+                throw InterpError(std::string("Error evaluating local '") + name + "': " + e.what(), line_number);
             }
 
         } else if (tokens[0] == "print") {
@@ -202,16 +201,16 @@ void Eval::evaluate(const std::string& code) {
                 }
                 else {
                     if (locals.find(part) == locals.end())
-                        throw AVRError("Variable '" + part + "' not defined", line_number);
+                        throw InterpError("Variable '" + part + "' not defined", line_number);
                     out += valueToString(locals[part]);
                 }
             }
             std::cout << out << std::endl;
         } else if (tokens[0] == "wait") {
             if (tokens.size() != 2)
-                throw AVRError("Invalid wait syntax", line_number);
+                throw InterpError("Invalid wait syntax", line_number);
 
-            std::string arg = tokens[1];
+            const std::string& arg = tokens[1];
             Value v;
             if (locals.find(arg) != locals.end()) v = locals[arg];
             else v = parseValue(arg);
@@ -219,7 +218,7 @@ void Eval::evaluate(const std::string& code) {
             try {
                 waitFunction(v);
             } catch (const std::exception& e) {
-                throw AVRError(std::string("Error in wait: ") + e.what(), line_number);
+                throw InterpError(std::string("Error in wait: ") + e.what(), line_number);
             }
         } else if (tokens[0] == "if") {
             const std::string& ifLine = trimmed;
@@ -245,6 +244,7 @@ void Eval::evaluate(const std::string& code) {
             };
 
             std::vector<Part> parts;
+            // string comparation bla bla bla bullshit + is ok do not care to do string::append. IT WORKS SO I LEAVE LIKE THIS
             std::istringstream bl( ifLine + "\n" + wholeBlock );
             std::string ln;
             Part current;
@@ -286,8 +286,8 @@ void Eval::evaluate(const std::string& code) {
                         left.erase(left.find_last_not_of(" \t")+1);
                         right.erase(0,right.find_first_not_of(" \t"));
                         right.erase(right.find_last_not_of(" \t")+1);
-                        double a = evalExpression(left);
-                        double b = evalExpression(right);
+                        const double a = evalExpression(left);
+                        const double b = evalExpression(right);
                         if(op==">") return a>b;
                         if(op=="<") return a<b;
                         if(op==">=") return a>=b;
@@ -296,7 +296,7 @@ void Eval::evaluate(const std::string& code) {
                         if(op=="!=") return a!=b;
                     }
                 }
-                throw AVRError("Invalid condition '" + c + "'", line_number);
+                throw InterpError("Invalid condition '" + c + "'", line_number);
             };
 
             bool executed = false;
@@ -322,10 +322,11 @@ void Eval::evaluate(const std::string& code) {
                 }
             }
         } else if (tokens[0] == "while") {
+            // condLine fucking means condition like this --> while <CONDITION> do
             std::string condline = trimmed.substr(5);
             auto posDo = condline.find("do");
             if (posDo == std::string::npos)
-                throw AVRError("Missing 'do' in while", line_number);
+                throw InterpError("Missing 'do' in while", line_number);
 
             std::string condition = condline.substr(0, posDo);
             // trim
@@ -359,8 +360,8 @@ void Eval::evaluate(const std::string& code) {
                         left.erase(left.find_last_not_of(" \t") + 1);
                         right.erase(0, right.find_first_not_of(" \t"));
                         right.erase(right.find_last_not_of(" \t") + 1);
-                        double a = evalExpression(left);
-                        double b = evalExpression(right);
+                        const double a = evalExpression(left);
+                        const double b = evalExpression(right);
                         if (op == ">") return a > b;
                         if (op == "<") return a < b;
                         if (op == ">=") return a >= b;
@@ -369,7 +370,7 @@ void Eval::evaluate(const std::string& code) {
                         if (op == "!=") return a != b;
                     }
                 }
-                throw AVRError("Invalid condition '" + c + "'", line_number);
+                throw InterpError("Invalid condition '" + c + "'", line_number);
             };
 
             while (evalCond(condition)) {
@@ -379,7 +380,7 @@ void Eval::evaluate(const std::string& code) {
                 this->locals = inner.locals;
             }
         } else {
-            throw AVRError("Unknown command '" + tokens[0] + "'", line_number);
+            throw InterpError("Unknown command '" + tokens[0] + "'", line_number);
         }
     }
 }

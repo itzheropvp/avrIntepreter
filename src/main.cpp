@@ -1,8 +1,9 @@
 #include <iostream>
 #include "avrInterpreter/Interpreter.h"
 
-int main(int argc, char* argv[]) {
-    avr::Interpreter interp;
+int main(const int argc /* same shit here */, char* argv[]) {
+    // omg another const that i need to add!
+    const avr::Interpreter interp;
 
     if (argc > 1) {
         if (!interp.runFile(argv[1])) {
