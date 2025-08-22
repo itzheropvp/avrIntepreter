@@ -4,9 +4,9 @@
 #include <vector>
 #include <stdexcept>
 
-class AVRError : public std::runtime_error {
+class InterpError : public std::runtime_error {
 public:
-    explicit AVRError(const std::string& msg, int line = -1, int col = -1)
+    explicit InterpError(const std::string& msg, int line = -1, int col = -1)
         : std::runtime_error(formatMessage(msg, line, col)) {}
 private:
     static std::string formatMessage(const std::string& msg, int line, int col) {
