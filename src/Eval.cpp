@@ -12,8 +12,8 @@ std::vector<std::string> Eval::splitTokens(const std::string& line) {
     std::string token;
     bool in_quotes = false;
 
-    for (size_t i = 0; i < line.size(); ++i) {
-        if (const char c = line[i]; c == '"') {
+    for (const char c : line) {
+        if (c == '"') {
             token += c;
             if (in_quotes) {
                 tokens.push_back(token);
