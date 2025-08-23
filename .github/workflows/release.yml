@@ -44,22 +44,23 @@ jobs:
       - name: Build the project
         run: cmake --build build
 
-      - name: Upload artifacts
+      - name: Upload Linux artifact
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: avrInterpreter_cli_${{ runner.os }}
-          path: |
-            build/avrInterpreter_cli
-            build/**/*.exe # Matches Windows executable in Debug/Release folder
-            build/avrInterpreter_cli # Matches macOS executable
+          name: avrInterpreter_cli_linux
+          path: build/avrInterpreter_cli
 
-      - name: Create a release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v1
+      - name: Upload Windows artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            build/avrInterpreter_cli
-            build/**/*.exe
-            build/avrInterpreter_cli
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: avrInterpreter_cli_windows
+          path: build/Debug/avrInterpreter_cli.exe
+
+      - name: Upload macOS artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: avrInterpreter_cli_macos
+          path: build/avrInterpreter_cli
