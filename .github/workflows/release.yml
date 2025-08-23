@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-
+    tags:
+      - 'v*'
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -30,10 +31,7 @@ jobs:
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
-        # Visual Studio is pre-installed on Windows runners, so we just need CMake.
         run: |
-          # The Windows runner has Visual Studio and CMake pre-installed.
-          # You can add other tools like vcpkg here if needed.
           echo "Windows build environment is ready."
 
       - name: Configure CMake
