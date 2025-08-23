@@ -4,3 +4,5 @@
 /avr/.vscode
 /avr/.env
 /avr/*.vsix
+
+.DS_Store
