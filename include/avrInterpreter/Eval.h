@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <stdexcept>
+#include <variant>
 
 class InterpError : public std::runtime_error {
 public:
